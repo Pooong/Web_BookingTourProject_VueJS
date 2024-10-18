@@ -115,6 +115,19 @@
         <input type="number" v-model="tour.DEPOSIT_PERCENTAGE" required />
       </div>
 
+      <h3>Select Tour Guides</h3>
+      <div class="scrollable">
+        <div v-for="(user, index) in userRoles" :key="user._id">
+          <input
+            type="checkbox"
+            :id="user._id"
+            :value="user._id"
+            v-model="ID_TOUR_GUIDE_SUPERVISOR"
+          />
+          <label :for="user._id">{{ user.FULLNAME }}</label>
+        </div>
+      </div>
+
       <button type="submit">Create Tour</button>
     </form>
   </div>
@@ -155,9 +168,10 @@ export default {
         DEPOSIT_PERCENTAGE: 30,
       },
       visitPlaces: "",
-      IMAGES: [], // Khai báo mảng để chứa các hình ảnh đã chọn
-      userRoles: [], // Chứa danh sách các role của user
-      selectedFiles: [], // Chứa các file đã chọn
+      IMAGES: [],
+      userRoles: [],
+      selectedFiles: [],
+      ID_TOUR_GUIDE_SUPERVISOR: [], // Mảng để lưu ID của tour guide
     };
   },
   mounted() {
@@ -166,32 +180,28 @@ export default {
   methods: {
     async getRoleUser() {
       try {
-        // Lấy token từ localStorage
         const token = localStorage.getItem("Token");
-
-        // Dữ liệu body cần gửi
         const body = {
           role: "ADMIN",
         };
 
         const response = await axios.post(
           "http://localhost:3000/users/role",
-          body, // Truyền dữ liệu body vào đây
+          body,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        console.log(1);
-        this.userRoles = response.data.data;
+        this.userRoles = response.data.data; // Lưu danh sách user roles
       } catch (error) {
         console.error("Error fetching user roles:", error);
       }
     },
     onFileChange(event) {
-      this.selectedFiles = Array.from(event.target.files); // Lưu các file đã chọn
-      this.IMAGES = [...this.selectedFiles]; // Cập nhật mảng IMAGES với các tệp đã chọn
+      this.selectedFiles = Array.from(event.target.files);
+      this.IMAGES = [...this.selectedFiles];
     },
     addCalendar() {
       this.tour.CALENDAR_TOUR.push({
@@ -209,10 +219,8 @@ export default {
     },
     async createTour() {
       try {
-        // Lấy token từ localStorage
         const token = localStorage.getItem("Token");
 
-        // Tách visit places thành mảng
         this.tour.CUSTOM_ATTRIBUTES.VISIT_PLACE = this.visitPlaces
           .split(",")
           .map((place) => place.trim());
@@ -222,14 +230,13 @@ export default {
         // Đính kèm các trường văn bản vào formData
         formData.append("TOUR_NAME", this.tour.TOUR_NAME);
         formData.append("TYPE", this.tour.TYPE);
-        formData.append("IS_ACTIVE", this.tour.IS_ACTIVE); // Chuyển đổi chuỗi sang boolean
+        formData.append("IS_ACTIVE", this.tour.IS_ACTIVE);
         formData.append("PRICE_PER_PERSON", this.tour.PRICE_PER_PERSON);
         formData.append("DESCRIPTION", this.tour.DESCRIPTION);
         formData.append("VEHICLE", this.tour.VEHICLE);
         formData.append("LOCATION", this.tour.LOCATION);
         formData.append("DEPOSIT_PERCENTAGE", this.tour.DEPOSIT_PERCENTAGE);
 
-        // Không stringify, gửi đối tượng thẳng
         formData.append(
           "CUSTOM_ATTRIBUTES[HOTEL]",
           this.tour.CUSTOM_ATTRIBUTES.HOTEL
@@ -251,34 +258,6 @@ export default {
           this.tour.CUSTOM_ATTRIBUTES.NOTE
         );
 
-        // formData.append(
-        //   "CALENDAR_TOUR[START_DATE]",
-        //   this.tour.CALENDAR_TOUR.START_DATE
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[END_DATE]",
-        //   this.tour.CALENDAR_TOUR.END_DATE
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[START_TIME]",
-        //   this.tour.CALENDAR_TOUR.START_TIME
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[AVAILABLE]",
-        //   this.tour.CALENDAR_TOUR.AVAILABLE
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[AVAILABLE_SLOTS]",
-        //   this.tour.CALENDAR_TOUR.AVAILABLE_SLOTS
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[NumberOfDay]",
-        //   this.tour.CALENDAR_TOUR.NumberOfDay
-        // );
-        // formData.append(
-        //   "CALENDAR_TOUR[NumberOfNight]",
-        //   this.tour.CALENDAR_TOUR.NumberOfNight
-        // );
         // Gửi từng CALENDAR_TOUR
         this.tour.CALENDAR_TOUR.forEach((calendar, index) => {
           formData.append(
@@ -300,32 +279,36 @@ export default {
           formData.append(
             `CALENDAR_TOUR[${index}][AVAILABLE_SLOTS]`,
             Number(calendar.AVAILABLE_SLOTS)
-          ); // Chuyển đổi thành số
+          );
           formData.append(
             `CALENDAR_TOUR[${index}][NumberOfDay]`,
             Number(calendar.NumberOfDay)
-          ); // Chuyển đổi thành số
+          );
           formData.append(
             `CALENDAR_TOUR[${index}][NumberOfNight]`,
             Number(calendar.NumberOfNight)
-          ); // Chuyển đổi thành số
+          );
         });
+
         // Đính kèm mỗi tệp đã chọn vào formData với tên là 'IMAGES[]'
         if (this.selectedFiles.length > 0) {
           this.selectedFiles.forEach((file) => {
-            formData.append("IMAGES[]", file); // Thêm từng file vào formData
+            formData.append("IMAGES[]", file);
           });
         }
 
-        // In toàn bộ dữ liệu FormData
-        console.log("FormData Object:", formData);
+        // Đính kèm ID_TOUR_GUIDE_SUPERVISOR
+        this.ID_TOUR_GUIDE_SUPERVISOR.forEach((id) => {
+          formData.append("ID_TOUR_GUIDE_SUPERVISOR[]", id); // Đính kèm từng ObjectId
+        });
+
         const response = await axios.post(
           "http://localhost:3000/tours/",
-          formData, // Gửi formData
+          formData,
           {
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`, // Truyền token
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -358,6 +341,15 @@ export default {
   margin-top: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.scrollable {
+  max-height: 200px; /* Chiều cao tối đa cho danh sách cuộn */
+  overflow-y: auto; /* Cho phép cuộn dọc */
+  border: 1px solid #ccc; /* Thêm viền để phân biệt khu vực */
+  border-radius: 4px; /* Bo tròn góc */
+  padding: 10px; /* Thêm khoảng cách bên trong */
+  margin-bottom: 15px; /* Khoảng cách dưới cùng */
 }
 
 button {
