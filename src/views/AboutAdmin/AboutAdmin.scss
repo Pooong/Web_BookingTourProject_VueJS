@@ -1,0 +1,201 @@
+.containPage {
+  padding: 20px 30px;
+}
+.btnAdd {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background-color: #46c35f;
+  color: #fff;
+  box-shadow: 0px 5px 5px rgb(195, 183, 183);
+  &:hover {
+    opacity: 0.8;
+  }
+}
+.btnAdd:active {
+  transform: scale(1.05);
+}
+.contentPage {
+  padding: 16px;
+  border-radius: 10px;
+  background-color: #eae2e24a;
+  min-height: calc(100vh - 136px);
+  //   background-color: #f5f7ff;
+  .item {
+    position: relative;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px #a5a1a1b3;
+    min-height: 200px;
+    width: 100%;
+    margin: 10px;
+    display: flex;
+    padding: 12px;
+    margin-left: auto;
+    margin-right: auto;
+    .leftItem {
+      margin-right: 12px;
+      .imageItem {
+        width: 100px;
+        height: 140px;
+        border-radius: 4px;
+      }
+    }
+    .rightItem {
+      width: 100%;
+      .dataItem {
+        width: 100%;
+        .title {
+          margin-right: 4px;
+          font-weight: 500;
+          color: #737f8b;
+        }
+        .content {
+          //   font-weight: 600;
+        }
+      }
+    }
+    .actionItem {
+      position: absolute;
+      right: 2%;
+      display: flex;
+      gap: 5px;
+      bottom: 4%;
+      .edit,
+      .remove {
+        padding: 4px 12px;
+        border-radius: 4px;
+        color: #fff;
+        &:hover {
+          cursor: pointer;
+          scale: 1.05;
+        }
+      }
+      .edit {
+        margin-right: 10px;
+        background-color: #309bff;
+      }
+      .remove {
+        background-color: rgb(213, 12, 12);
+      }
+    }
+  }
+  @media (max-width: 920px) {
+    .item {
+      margin: 10px auto;
+    }
+  }
+  .pagination {
+    justify-content: center;
+    align-items: center;
+    margin: 20px;
+    display: flex;
+    .page-link:hover {
+      background-color: var(--orange);
+      color: var(--light);
+    }
+    .page-link:focus {
+      background-color: var(--orange);
+      color: var(--light);
+    }
+  }
+}
+.leftModal {
+  .imageLeftModal {
+    max-width: 200px;
+    margin: auto;
+    display: flex;
+    min-height: 300px;
+  }
+  .btnAddImage {
+    margin-top: 20px;
+    label {
+      padding: 10px 15px;
+      margin: auto;
+      font-size: 16px;
+      border-radius: 10px;
+      background-color: var(--orange);
+      color: #fff;
+      .iconModal {
+        font-size: 18px;
+        padding: 0px 2px;
+        margin: 0px 5px;
+      }
+    }
+    input {
+      display: none;
+    }
+  }
+}
+.rightModal {
+  .groupForm {
+    display: grid;
+    grid-template-columns: 94px auto;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background-color: rgba(255, 166, 0, 0.499);
+    color: #141a46;
+    margin: 10px;
+    span {
+      margin: 5px 0px;
+    }
+    .inputGroup {
+      border: none;
+      outline: none;
+      background-color: transparent;
+      padding: 0px 5px;
+    }
+    .inputGroup::placeholder {
+      color: rgba(255, 255, 255, 0.815);
+    }
+  }
+  .groupForm2 {
+    display: grid;
+    grid-template-columns: 60px auto;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background-color: rgba(255, 166, 0, 0.499);
+    color: #141a46;
+    margin: 10px;
+    span {
+      margin: 5px 0px;
+    }
+    .groupText {
+      border: none;
+      background-color: transparent;
+      outline: none;
+      padding: 5px;
+    }
+    .groupText::placeholder {
+      color: rgba(255, 255, 255, 0.815);
+    }
+  }
+}
+.errorText {
+  margin: 0;
+  color: rgb(213, 14, 14);
+  padding: 0px 10px;
+}
+.groupSearch {
+  background-color: #cdc3c373;
+  border-radius: 20px;
+  width: 283px;
+  margin-bottom: 18px;
+  .inputSearch {
+    padding: 7px 13px;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    border-bottom-left-radius: 20px;
+    border-top-left-radius: 20px;
+  }
+  .iconSearch {
+    background-color: var(--purple);
+    color: var(--light);
+    padding: 10px 23px;
+    border-radius: 20px;
+    &:hover {
+      cursor: pointer;
+      opacity: 0.8;
+    }
+  }
+}

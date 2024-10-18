@@ -1,0 +1,21 @@
+.containPage {
+    padding: 20px 30px 10px 30px;
+  }
+  .contentPage {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #eae2e24a;
+  }
+  .btn-edit {
+    background-color: #343a40;
+    color: #fff;
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+  .bgProfile {
+    background-image: url(https://png.pngtree.com/thumb_back/fh260/background/20230426/pngtree-an-old-library-or-book-room-with-some-books-and-plants-image_2521166.jpg);
+    height: 300px;
+    background-size: contain;
+    // background-position: center;
+  }
