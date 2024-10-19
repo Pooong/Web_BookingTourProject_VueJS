@@ -2,47 +2,51 @@
   <div class="create-tour">
     <h1>Create New Tour</h1>
     <form @submit.prevent="createTour">
-      <div>
-        <label for="tourName">Tour Name:</label>
-        <input type="text" v-model="tour.TOUR_NAME" required />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tourName">Tour Name:</label>
+          <input type="text" v-model="tour.TOUR_NAME" required />
+        </div>
+        <div class="form-group">
+          <label for="type">Type:</label>
+          <input type="text" v-model="tour.TYPE" required />
+        </div>
       </div>
 
-      <div>
-        <label for="type">Type:</label>
-        <input type="text" v-model="tour.TYPE" required />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="isActive">Active:</label>
+          <select v-model="tour.IS_ACTIVE" required>
+            <option :value="true">Yes</option>
+            <option :value="false">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pricePerPerson">Price Per Person:</label>
+          <input type="number" v-model="tour.PRICE_PER_PERSON" required />
+        </div>
       </div>
 
-      <div>
-        <label for="isActive">Active:</label>
-        <select v-model="tour.IS_ACTIVE" required>
-          <option :value="true">Yes</option>
-          <option :value="false">No</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="description">Description:</label>
+          <textarea v-model="tour.DESCRIPTION" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="vehicle">Vehicle:</label>
+          <input type="text" v-model="tour.VEHICLE" required />
+        </div>
       </div>
 
-      <div>
-        <label for="pricePerPerson">Price Per Person:</label>
-        <input type="number" v-model="tour.PRICE_PER_PERSON" required />
-      </div>
-
-      <div>
-        <label for="description">Description:</label>
-        <textarea v-model="tour.DESCRIPTION" required></textarea>
-      </div>
-
-      <div>
-        <label for="vehicle">Vehicle:</label>
-        <input type="text" v-model="tour.VEHICLE" required />
-      </div>
-
-      <div>
-        <label for="location">Location:</label>
-        <input type="text" v-model="tour.LOCATION" required />
-      </div>
-
-      <div>
-        <label for="images">Images (Select multiple files):</label>
-        <input type="file" multiple @change="onFileChange" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="location">Location:</label>
+          <input type="text" v-model="tour.LOCATION" required />
+        </div>
+        <div class="form-group">
+          <label for="images">Images (Select multiple files):</label>
+          <input type="file" multiple @change="onFileChange" />
+        </div>
       </div>
 
       <h3>Selected Images:</h3>
@@ -52,82 +56,126 @@
 
       <h3>Calendar Tour</h3>
       <div v-for="(calendar, index) in tour.CALENDAR_TOUR" :key="index">
-        <label>Start Date:</label>
-        <input type="date" v-model="calendar.START_DATE" required />
-
-        <label>End Date:</label>
-        <input type="date" v-model="calendar.END_DATE" required />
-
-        <label>Start Time:</label>
-        <input type="time" v-model="calendar.START_TIME" required />
-
-        <label>Available Slots:</label>
-        <input type="number" v-model="calendar.AVAILABLE_SLOTS" required />
-
-        <label>Number of Days:</label>
-        <input type="number" v-model="calendar.NumberOfDay" required />
-
-        <label>Number of Nights:</label>
-        <input type="number" v-model="calendar.NumberOfNight" required />
-
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date:</label>
+            <input type="date" v-model="calendar.START_DATE" required />
+          </div>
+          <div class="form-group">
+            <label>End Date:</label>
+            <input type="date" v-model="calendar.END_DATE" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Time:</label>
+            <input type="time" v-model="calendar.START_TIME" required />
+          </div>
+          <div class="form-group">
+            <label>Available Slots:</label>
+            <input type="number" v-model="calendar.AVAILABLE_SLOTS" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Number of Days:</label>
+            <input type="number" v-model="calendar.NumberOfDay" required />
+          </div>
+          <div class="form-group">
+            <label>Number of Nights:</label>
+            <input type="number" v-model="calendar.NumberOfNight" required />
+          </div>
+        </div>
         <button type="button" @click="removeCalendar(index)">Remove</button>
       </div>
 
       <button type="button" @click="addCalendar">Add New Calendar</button>
 
       <h3>Custom Attributes</h3>
-      <div>
-        <label for="hotel">Hotel:</label>
-        <input type="text" v-model="tour.CUSTOM_ATTRIBUTES.HOTEL" required />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="hotel">Hotel:</label>
+          <input type="text" v-model="tour.CUSTOM_ATTRIBUTES.HOTEL" required />
+        </div>
+        <div class="form-group">
+          <label for="restaurant">Restaurant:</label>
+          <input
+            type="text"
+            v-model="tour.CUSTOM_ATTRIBUTES.RESTAURANT"
+            required
+          />
+        </div>
       </div>
 
-      <div>
-        <label for="restaurant">Restaurant:</label>
-        <input
-          type="text"
-          v-model="tour.CUSTOM_ATTRIBUTES.RESTAURANT"
-          required
-        />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="visitPlace">Visit Places (Separate by commas):</label>
+          <input
+            type="text"
+            v-model="visitPlaces"
+            placeholder="Enter visit places"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="vehiclePersenal">Personal Vehicle:</label>
+          <input
+            type="text"
+            v-model="tour.CUSTOM_ATTRIBUTES.VEHICLE_PERSENAL"
+          />
+        </div>
       </div>
 
-      <div>
-        <label for="visitPlace">Visit Places (Separate by commas):</label>
-        <input
-          type="text"
-          v-model="visitPlaces"
-          placeholder="Enter visit places"
-          required
-        />
-      </div>
-
-      <div>
-        <label for="vehiclePersenal">Personal Vehicle:</label>
-        <input type="text" v-model="tour.CUSTOM_ATTRIBUTES.VEHICLE_PERSENAL" />
-      </div>
-
-      <div>
-        <label for="note">Note:</label>
-        <input type="text" v-model="tour.CUSTOM_ATTRIBUTES.NOTE" />
-      </div>
-
-      <div>
-        <label for="depositPercentage">Deposit Percentage:</label>
-        <input type="number" v-model="tour.DEPOSIT_PERCENTAGE" required />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="note">Note:</label>
+          <input type="text" v-model="tour.CUSTOM_ATTRIBUTES.NOTE" />
+        </div>
+        <div class="form-group">
+          <label for="depositPercentage">Deposit Percentage:</label>
+          <input type="number" v-model="tour.DEPOSIT_PERCENTAGE" required />
+        </div>
       </div>
 
       <h3>Select Tour Guides</h3>
-      <div class="scrollable">
-        <div v-for="(user, index) in userRoles" :key="user._id">
+      <!-- <div class="scrollable">
+        <div
+          v-for="(user, index) in userRoles"
+          :key="user._id"
+          class="form-checkbox"
+        >
+          <label :for="user._id">{{ user.FULLNAME }}</label>
           <input
             type="checkbox"
             :id="user._id"
             :value="user._id"
             v-model="ID_TOUR_GUIDE_SUPERVISOR"
           />
-          <label :for="user._id">{{ user.FULLNAME }}</label>
         </div>
-      </div>
-
+      </div> -->
+      <table class="guide-table">
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Tour Guide Name</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(user, index) in userRoles" :key="user._id">
+            <td>
+              <input
+                type="checkbox"
+                :id="user._id"
+                :value="user._id"
+                v-model="ID_TOUR_GUIDE_SUPERVISOR"
+              />
+            </td>
+            <td>
+              <label :for="user._id">{{ user.FULLNAME }}</label>
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <button type="submit">Create Tour</button>
     </form>
   </div>
@@ -329,8 +377,23 @@ export default {
   margin: 0 auto;
 }
 
-.create-tour div {
+.create-tour h1 {
+  text-align: center;
+}
+
+.form-row {
+  display: flex;
+  justify-content: space-between;
   margin-bottom: 15px;
+}
+
+.form-group {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.form-group:last-child {
+  margin-right: 0;
 }
 
 .create-tour input,
@@ -341,15 +404,42 @@ export default {
   margin-top: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  height: 40px; /* Chiều cao cố định cho các ô input */
+}
+
+.create-tour textarea {
+  max-height: 80px; /* Chiều cao cố định cho textarea */
+  resize: none; /* Ngăn không cho người dùng thay đổi kích thước textarea */
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse; /* Hợp nhất các đường viền */
+  margin-bottom: 15px; /* Khoảng cách dưới cùng */
+}
+
+.guide-table th,
+.guide-table td {
+  border: 1px solid #ccc; /* Đường viền cho bảng */
+  padding: 8px; /* Khoảng cách bên trong ô */
+  text-align: left; /* Canh lề trái */
+}
+
+.guide-table th {
+  background-color: #f5f5f5; /* Màu nền cho header */
 }
 
 .scrollable {
-  max-height: 200px; /* Chiều cao tối đa cho danh sách cuộn */
+  max-height: 150px; /* Chiều cao tối đa cho danh sách cuộn (nhỏ lại) */
   overflow-y: auto; /* Cho phép cuộn dọc */
   border: 1px solid #ccc; /* Thêm viền để phân biệt khu vực */
   border-radius: 4px; /* Bo tròn góc */
   padding: 10px; /* Thêm khoảng cách bên trong */
-  margin-bottom: 15px; /* Khoảng cách dưới cùng */
+}
+
+.scrollable input[type="checkbox"] {
+  transform: scale(0.8); /* Nhỏ lại kích thước checkbox */
+  margin-right: 5px; /* Khoảng cách giữa checkbox và label */
 }
 
 button {
@@ -359,6 +449,8 @@ button {
   border: none;
   cursor: pointer;
   border-radius: 4px;
+  margin-top: 10px;
+  width: 100%; /* Chiều rộng 100% cho nút */
 }
 
 button:hover {
