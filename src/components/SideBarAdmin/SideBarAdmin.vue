@@ -21,13 +21,13 @@
       </router-link>
       <router-link to="/admin/about" class="button">
         <span class="material-icons"
-          ><i class="fa-solid fa-bell-concierge"></i
+          ><i class="fa-solid fa-earth-americas"></i
         ></span>
         <span class="text">Danh sách Tour</span>
       </router-link>
       <router-link to="/admin/customer" class="button">
         <span class="material-icons"><i class="fa-solid fa-users"></i></span>
-        <span class="text">Khách hàng</span>
+        <span class="text">Người dùng</span>
       </router-link>
       <router-link to="/admin/history" class="button">
         <span class="material-icons"><i class="fa-solid fa-clock"></i></span>
@@ -35,12 +35,12 @@
       </router-link>
       <router-link v-if="isLogin" to="/admin/info" class="button">
         <span class="material-icons"><i class="fa-solid fa-user"></i></span>
-        <span class="text">Profile</span>
-      </router-link>
-      <router-link v-else to="/admin/login" class="button">
-        <span class="material-icons"><i class="fa-solid fa-user"></i></span>
         <span class="text">Trang cá nhân</span>
       </router-link>
+      <!-- <router-link v-else to="/admin/login" class="button">
+        <span class="material-icons"><i class="fa-solid fa-user"></i></span>
+        <span class="text">Trang cá nhân</span>
+      </router-link> -->
     </div>
     <div class="flex"></div>
     <div class="menu" @click="showModal">

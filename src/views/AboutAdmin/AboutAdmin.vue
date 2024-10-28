@@ -16,11 +16,11 @@
 
       <div class="ml-auto">
         <!-- Nút Thêm Tour -->
-        <button v-if="isLogin" @click="showModalAdd" class="btnAdd">
+        <button v-if="isLogin" @click="moveToAddTour" class="btnAdd">
           <i class="fa-solid fa-plus"></i> Thêm Tour
         </button>
         <router-link to="/admin/login" v-else>
-          <button @click="showModalAdd" class="btnAdd">
+          <button class="btnAdd">
             <i class="fa-solid fa-mug-hot"></i> Thêm
           </button>
         </router-link>
@@ -54,53 +54,31 @@
                 <span class="content">{{ item.PRICE_PER_PERSON }} VND</span>
               </div>
             </div>
+
             <div class="actionItem gap">
+              <!-- Update button -->
               <button
-                @click="showModalUpdate(item)"
-                :style="`${isLogin ? '' : 'display: none'}`"
+                v-if="isLogin"
+                @click="redirectToUpdateTour(item)"
                 class="edit"
               >
                 <i class="fa-regular fa-pen-to-square"></i> Cập nhật
               </button>
 
+              <!-- Delete button -->
               <button
+                v-if="isLogin"
                 @click="showModalDelete(item)"
-                :style="`${isLogin ? '' : 'display: none'}`"
                 class="remove"
               >
                 <i class="fa-solid fa-trash iconRemove"></i> Xóa
               </button>
-              <a-modal
-                style="top: 40px"
-                v-model:open="isModalDelete"
-                title="Xóa tour"
-                @ok="handleOkDelete"
-                @cancel="handleCancelDelete"
-                :ok-button-props="okButtonProps"
-                okText="Xác nhận"
-                cancelText="Đóng"
-              >
-                <p>Bạn có chắc muốn xóa tour: {{ selectedItem.TOUR_NAME }}?</p>
-              </a-modal>
-              <a-modal
-                style="top: 40px"
-                v-model:open="isModalUpdate"
-                title="Cập nhật Tour"
-                @ok="handleOkDelete"
-                @cancel="handleCancelDelete"
-                :ok-button-props="okButtonProps"
-                okText="Xác nhận"
-                cancelText="Đóng"
-              >
-                <p>
-                  Bạn sẽ được chuyển đến trang chỉnh sửa Tour:
-                  {{ selectedItem.TOUR_NAME }}?
-                </p>
-              </a-modal>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- No tours found -->
       <div
         v-else
         class="text-center"
@@ -108,63 +86,78 @@
       >
         <p>Không tìm thấy tour</p>
       </div>
+
+      <!-- Delete Confirmation Modal -->
+      <a-modal
+        v-model:open="isModalDelete"
+        title="Xóa tour"
+        @ok="handleOkDelete"
+        @cancel="handleCancelDelete"
+        :ok-button-props="okButtonProps"
+        okText="Xác nhận"
+        cancelText="Đóng"
+      >
+        <p>Bạn có chắc muốn xóa tour: {{ selectedItem.TOUR_NAME }}?</p>
+      </a-modal>
     </div>
   </div>
 </template>
+
 <script setup>
 import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import axios from "axios";
 import { toast } from "vue3-toastify";
-const isModalDelete = ref(false);
-const isModalUpdate = ref(false); // Điều khiển mở/đóng modal xóa
-// Điều khiển mở/đóng modal xóa
-const selectedItem = ref(null); // Lưu thông tin tour được chọn để xóa
 
-onMounted(() => {});
-// Hàm mở modal xóa
-const showModalDelete = (item) => {
-  isModalDelete.value = true;
-  selectedItem.value = item; // Gán tour được chọn vào biến
-};
-
-const showModalUpdate = (item) => {
-  isModalUpdate.value = true;
-  selectedItem.value = item; // Gán tour được chọn vào biến
-};
+// Define refs
 const data = ref([]); // Chứa danh sách tour
 const searchQuery = ref(""); // Từ khóa tìm kiếm
-const isLogin = localStorage.getItem("isLogin");
-const handleCancelDelete = () => {
-  isModalDelete.value = false;
-};
-// Hàm lấy danh sách tour từ API
+const isLogin = localStorage.getItem("isLogin") === "true"; // Check login status
+const isModalDelete = ref(false); // Điều khiển mở/đóng modal xóa
+const selectedItem = ref(null); // Lưu thông tin tour được chọn để xóa
+const router = useRouter(); // Vue Router instance
+
+// Fetch tour data from API
 const fetchData = () => {
-  const token = localStorage.getItem("Token"); // Lấy token từ localStorage
+  const token = localStorage.getItem("Token"); // Get token from localStorage
 
   axios
     .get("http://localhost:3000/tours/", {
       headers: {
-        Authorization: `Bearer ${token}`, // Truyền token vào header
+        Authorization: `Bearer ${token}`, // Pass token in headers
       },
     })
     .then((res) => {
-      data.value = res.data; // Gán dữ liệu tour vào data
+      data.value = res.data; // Assign data to 'data' ref
     })
     .catch((err) => console.log(err));
 };
+
+// Redirect to edit tour page
+const redirectToUpdateTour = (tour) => {
+  router.push(`/admin/edit-tour/${tour._id}`); // Navigate to the edit page with tour ID
+};
+
+// Show delete modal
+const showModalDelete = (item) => {
+  isModalDelete.value = true;
+  selectedItem.value = item; // Assign selected item to 'selectedItem'
+};
+
+// Delete tour handler
 const handleOkDelete = () => {
-  const token = localStorage.getItem("Token"); // Lấy token từ localStorage
+  const token = localStorage.getItem("Token"); // Get token from localStorage
 
   axios
     .delete(`http://localhost:3000/tours/${selectedItem.value._id}`, {
       headers: {
-        Authorization: `Bearer ${token}`, // Truyền token để xác thực
+        Authorization: `Bearer ${token}`, // Pass token for authentication
       },
     })
-    .then((res) => {
+    .then(() => {
       toast.success("Xóa tour thành công!");
-      fetchData();
-      handleCancelDelete();
+      fetchData(); // Refresh tour list
+      handleCancelDelete(); // Close delete modal
     })
     .catch((err) => {
       toast.error("Xóa tour thất bại!");
@@ -172,47 +165,50 @@ const handleOkDelete = () => {
     });
 };
 
-const okButtonProps = {
-  style: {
-    background: "red", // Đặt màu đỏ cho nút "OK"
-  },
+// Cancel delete modal
+const handleCancelDelete = () => {
+  isModalDelete.value = false;
 };
-// Gọi hàm fetchData khi component được mounted
-fetchData();
 
-// Hàm xem chi tiết tour (chuyển đến trang chi tiết tour)
-const viewTourDetail = (tour) => {
-  // Chuyển đến trang chi tiết tour với tour ID
-  console.log("Xem chi tiết tour:", tour._id);
+// Redirect to add tour page
+const moveToAddTour = () => {
+  router.push("/admin/add-tour");
 };
+
+// Search tours
 const searchTours = async () => {
-  const token = localStorage.getItem("Token"); // Lấy token từ localStorage
   if (searchQuery.value.trim() === "") {
-    toast.warn("Vui lòng nhập tên tour");
+    fetchData(); // Fetch all tours if search query is empty
     return;
   }
 
   try {
+    const token = localStorage.getItem("Token");
     const response = await axios.get("http://localhost:3000/tours/search", {
-      headers: {
-        Authorization: `Bearer ${token}`, // Truyền token để xác thực
-      },
-      params: {
-        query: searchQuery.value, // Truyền query qua params
-      },
+      params: { query: searchQuery.value },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (response.data.success && response.data.data.length > 0) {
-      data.value = response.data.data; // Gán dữ liệu trả về từ API vào biến data
+      data.value = response.data.data; // Assign response data to 'data'
+      toast.success("Tìm tour thành công");
     } else {
-      data.value = []; // Nếu không có kết quả tìm kiếm, trả về mảng rỗng
+      data.value = [];
+      toast.warn("Không tìm thấy tour phù hợp");
     }
   } catch (error) {
-    toast.error("Lỗi khi tìm kiếm tour");
-    console.error("Lỗi khi nhận dữ liệu từ API", error);
+    toast.error("Lỗi khi tìm kiếm tour.");
+    console.error(error);
   }
 };
+
+// OK button style
+const okButtonProps = { style: { background: "red" } };
+
+// Fetch data when component is mounted
+onMounted(fetchData);
 </script>
+
 <style lang="scss" scoped>
 @import "./AboutAdmin.scss";
 </style>

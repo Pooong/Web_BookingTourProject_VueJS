@@ -36,7 +36,6 @@
               <th scope="col">Tổng giá</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">Xem chi tiết</th>
-              <th scope="col">Hành động</th>
             </tr>
           </thead>
           <tbody>
@@ -58,14 +57,6 @@
                   <i class="fa-solid fa-eye"></i>
                 </button>
               </td>
-              <td class="d-flex justify-content-center">
-                <button @click="handleAccess(order)" class="accept">
-                  <i class="fa-solid fa-check"></i>
-                </button>
-                <button class="reject" @click="handleDenied(order)">
-                  <i class="fa-solid fa-x"></i>
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -77,7 +68,7 @@
         class="modal-overlay"
         @click.self="closeDetailModal"
       >
-        <div class="modal-detail">
+        <div class="modal-detail slide-in-right">
           <div class="modal-content">
             <button class="close-modal" @click="closeDetailModal">X</button>
             <h3 class="modal-title">Chi tiết đơn hàng</h3>
@@ -95,9 +86,7 @@
               </div>
               <div class="customer-name">
                 <i class="fa-solid fa-envelope"></i>
-                <span
-                  ><span>Email:</span> {{ selectedOrder.USER_ID.EMAIL }}</span
-                >
+                <span>Email: {{ selectedOrder.USER_ID.EMAIL }}</span>
               </div>
             </div>
 
@@ -114,12 +103,14 @@
                 <p class="product-name">{{ tour.TOUR_ID.TOUR_NAME }}</p>
                 <p>
                   {{ tour.SLOT }} x
+                  {{ " " }}
                   {{
                     formatCurrency(parseFloat(tour.TOUR_ID.PRICE_PER_PERSON))
                   }}
                 </p>
                 <p>
                   Thành tiền:
+                  {{ " " }}
                   {{
                     formatCurrency(
                       parseFloat(tour.SLOT * tour.TOUR_ID.PRICE_PER_PERSON)
@@ -136,7 +127,7 @@
                 {{ formatDateTime(selectedOrder.CREATE_AT) }}
               </p>
               <p class="total-price">
-                <strong>Tổng cộng:</strong>
+                <span>Tổng cộng:</span>
                 {{ formatCurrency(selectedOrder.TOTAL_PRICE) }}
               </p>
             </div>
@@ -234,11 +225,24 @@ const dashBoard = () => {
 const openDetailModal = (order) => {
   selectedOrder.value = order;
   showDetailModal.value = true;
+
+  // Thêm hiệu ứng trượt cho modal
+  setTimeout(() => {
+    document.querySelector(".modal-overlay").classList.add("show");
+    document.querySelector(".modal-detail").classList.add("slide-in-right");
+  }, 10); // Chờ một chút để CSS kịp thực hiện
 };
 
 // Close detail modal
 const closeDetailModal = () => {
-  showDetailModal.value = false;
+  const modalDetail = document.querySelector(".modal-detail");
+  modalDetail.classList.remove("slide-in-right");
+
+  // Gỡ bỏ lớp show sau khi hiệu ứng kết thúc
+  setTimeout(() => {
+    showDetailModal.value = false;
+    document.querySelector(".modal-overlay").classList.remove("show");
+  }, 500); // Chờ thời gian tương ứng với transition
 };
 
 // Format date and time
@@ -258,18 +262,6 @@ const getStatusClass = (status) => {
     : status === "Pending"
     ? "text-warning"
     : "text-danger";
-};
-
-// Handle booking approval
-const handleAccess = (order) => {
-  console.log("Xác nhận đơn:", order._id);
-  toast.success("Đơn đã được xác nhận");
-};
-
-// Handle booking denial
-const handleDenied = (order) => {
-  console.log("Hủy đơn:", order._id);
-  toast.error("Đơn đã bị hủy");
 };
 
 // Initial data fetch
@@ -325,7 +317,13 @@ p {
   display: flex;
   justify-content: flex-end;
   z-index: 1000;
-  transition: linear 0.5s ease-in-out;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out;
+}
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
 }
 .modal-detail {
   width: 400px;
@@ -334,10 +332,15 @@ p {
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
   padding: 20px;
   overflow-y: auto;
-  transition: linear 3s ease-in-out;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+.modal-detail.slide-in-right {
+  transform: translateX(0);
 }
 .modal-content {
   position: relative;
+  border: none;
 }
 .close-modal {
   position: absolute;

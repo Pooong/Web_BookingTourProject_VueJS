@@ -8,6 +8,8 @@ import AuthLayout from "@/Layouts/AuthLayout/AuthLayout.vue";
 import AboutAdmin from "@/views/AboutAdmin/AboutAdmin.vue";
 import InfoAdmin from "@/views/InfoAdmin/InfoAdmin.vue";
 import AddTour from "@/views/AddTourAdmin/AddTourAdmin.vue";
+import Customer from "@/views/Customer/Customer.vue";
+import EditTour from "@/views/EditTour/EditTour.vue";
 
 const routes = [
   // router Admin
@@ -33,6 +35,13 @@ const routes = [
     },
   },
   {
+    path: "/admin/edit-tour/:id",
+    component: EditTour,
+    meta: {
+      layout: AdminLayout,
+    },
+  },
+  {
     path: "/admin/info",
     component: InfoAdmin,
     meta: {
@@ -42,6 +51,13 @@ const routes = [
   {
     path: "/admin/add-tour",
     component: AddTour,
+    meta: {
+      layout: AdminLayout,
+    },
+  },
+  {
+    path: "/admin/customer",
+    component: Customer,
     meta: {
       layout: AdminLayout,
     },

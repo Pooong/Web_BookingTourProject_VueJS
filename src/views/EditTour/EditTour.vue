@@ -1,7 +1,7 @@
 <template>
   <div class="create-tour">
-    <h1>Tạo tour mới</h1>
-    <form @submit.prevent="createTour">
+    <h1>Chỉnh sửa Tour</h1>
+    <form @submit.prevent="updateTour">
       <div class="groupAttribute">
         <div class="form-row">
           <div class="form-group">
@@ -53,14 +53,29 @@
           </div>
           <div class="form-group">
             <label for="images">Chọn ảnh:</label>
-            <input type="file" multiple @change="onFileChange" />
+            <input type="file" multiple @change="onChaneFile" />
           </div>
         </div>
 
         <h3>Ảnh đã chọn:</h3>
-        <ul>
-          <li v-for="(image, index) in IMAGES" :key="index">
-            {{ image.name }}
+        <ul style="display: flex; list-style: none; flex-wrap: wrap">
+          <li
+            v-for="(image, index) in tour.IMAGES"
+            :key="index"
+            style="position: relative; margin: 5px"
+          >
+            <img
+              :src="typeof image === 'string' ? image : image.url"
+              alt="Selected Image"
+              class="selected-image"
+            />
+            <button
+              type="button"
+              class="delete-image-btn"
+              @click="removeImage(index)"
+            >
+              X
+            </button>
           </li>
         </ul>
       </div>
@@ -73,7 +88,7 @@
               <label>Ngày bắt đầu:</label>
               <input
                 type="date"
-                date-format="dd-MM-yyyy"
+                date-format="MM-dd-yyyy"
                 :min="minDate"
                 v-model="calendar.START_DATE"
                 @input="updateEndDate(index)"
@@ -122,7 +137,7 @@
               <label>Số đêm:</label>
               <input
                 type="number"
-                min="1"
+                :min="calendar.NumberOfDay - 1"
                 :max="calendar.NumberOfDay"
                 v-model="calendar.NumberOfNight"
                 required
@@ -171,7 +186,7 @@
             <label for="visitPlace">Địa điểm tham quan:</label>
             <input
               type="text"
-              v-model="visitPlaces"
+              v-model="tour.CUSTOM_ATTRIBUTES.VISIT_PLACE"
               placeholder="Nhập các địa điểm"
               required
             />
@@ -213,224 +228,226 @@
                 :id="user._id"
                 :value="user._id"
                 v-model="ID_TOUR_GUIDE_SUPERVISOR"
+                @change="toggleSupervisor(user._id)"
+                :checked="isChecked(user._id)"
                 class="checkbox-small"
               />
             </td>
             <td>
-              <label :for="user._id" class="label-small">{{
-                user.FULLNAME
-              }}</label>
+              <label :for="user._id" class="label-small">
+                {{ user.FULLNAME }}
+              </label>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <button type="submit" class="createTour">Tạo tour</button>
+      <button type="submit" class="createTour">Cập nhật</button>
     </form>
   </div>
 </template>
 
-<script>
+<script setup>
 import axios from "axios";
+import { useRoute, useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
-export default {
-  data() {
-    return {
-      tour: {
-        TOUR_NAME: "",
-        TYPE: "",
-        IS_ACTIVE: true,
-        PRICE_PER_PERSON: "",
-        DESCRIPTION: "",
-        VEHICLE: "",
-        LOCATION: "",
-        CALENDAR_TOUR: [
-          {
-            START_DATE: "",
-            END_DATE: "",
-            START_TIME: "",
-            AVAILABLE: true,
-            AVAILABLE_SLOTS: 30,
-            NumberOfDay: 3,
-            NumberOfNight: 2,
-          },
-        ],
-        CUSTOM_ATTRIBUTES: {
-          HOTEL: "",
-          RESTAURANT: "",
-          VISIT_PLACE: [],
-          VEHICLE_PERSENAL: "",
-          NOTE: "",
-        },
-        DEPOSIT_PERCENTAGE: 30,
-      },
-      minDate: new Date().toISOString().split("T")[0],
-      visitPlaces: "",
-      IMAGES: [],
-      userRoles: [],
-      selectedFiles: [],
-      ID_TOUR_GUIDE_SUPERVISOR: [],
-    };
+import { ref, onMounted } from "vue";
+
+// Khai báo các biến và hàm
+const route = useRoute();
+const router = useRouter();
+const tourId = route.params.id; // Lấy ID từ URL
+const tour = ref({
+  TOUR_NAME: "",
+  TYPE: "",
+  IS_ACTIVE: true,
+  PRICE_PER_PERSON: "",
+  DESCRIPTION: "",
+  VEHICLE: "",
+  LOCATION: "",
+  CALENDAR_TOUR: [
+    {
+      START_DATE: "",
+      END_DATE: "",
+      START_TIME: "",
+      AVAILABLE: true,
+      AVAILABLE_SLOTS: 30,
+      NumberOfDay: 3,
+      NumberOfNight: 2,
+    },
+  ],
+  IMAGES: [],
+  CUSTOM_ATTRIBUTES: {
+    HOTEL: "",
+    RESTAURANT: "",
+    VISIT_PLACE: [],
+    VEHICLE_PERSENAL: "",
+    NOTE: "",
   },
-  mounted() {
-    this.getRoleUser();
-  },
-  methods: {
-    async getRoleUser() {
-      try {
-        const token = localStorage.getItem("Token");
-        const body = {
-          role: true,
-        };
+  selectedFiles: [],
+  minDate: new Date().toISOString().split("T")[0],
+  DEPOSIT_PERCENTAGE: 30,
+});
+const userRoles = ref([]);
+const ID_TOUR_GUIDE_SUPERVISOR = ref([]);
+const ID_TOUR_CHECKED = ref([]);
 
-        const response = await axios.post(
-          "http://localhost:3000/users/role",
-          body,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        this.userRoles = response.data.data; // Lưu danh sách user roles
-      } catch (error) {
-        console.error("Error fetching user roles:", error);
-      }
-    },
-    updateEndDate(index) {
-      const calendar = this.tour.CALENDAR_TOUR[index];
-      if (calendar.START_DATE && calendar.NumberOfDay) {
-        const startDate = new Date(calendar.START_DATE);
-        startDate.setDate(startDate.getDate() + calendar.NumberOfDay);
-        calendar.END_DATE = startDate.toISOString().split("T")[0];
-      }
-    },
-    addCalendar() {
-      this.tour.CALENDAR_TOUR.push({
-        START_DATE: "",
-        END_DATE: "",
-        START_TIME: "",
-        AVAILABLE: true,
-        AVAILABLE_SLOTS: 30,
-        NumberOfDay: 3,
-        NumberOfNight: 2,
-      });
-    },
-    removeCalendar(index) {
-      this.tour.CALENDAR_TOUR.splice(index, 1);
-    },
-
-    onFileChange(event) {
-      this.selectedFiles = Array.from(event.target.files);
-      this.IMAGES = [...this.selectedFiles];
-    },
-    async createTour() {
-      try {
-        this.loading = true;
-        const token = localStorage.getItem("Token");
-
-        this.tour.CUSTOM_ATTRIBUTES.VISIT_PLACE = this.visitPlaces
-          .split(",")
-          .map((place) => place.trim());
-
-        const formData = new FormData();
-
-        // Đính kèm các trường văn bản vào formData
-        formData.append("TOUR_NAME", this.tour.TOUR_NAME);
-        formData.append("TYPE", this.tour.TYPE);
-        formData.append("IS_ACTIVE", this.tour.IS_ACTIVE);
-        formData.append("PRICE_PER_PERSON", this.tour.PRICE_PER_PERSON);
-        formData.append("DESCRIPTION", this.tour.DESCRIPTION);
-        formData.append("VEHICLE", this.tour.VEHICLE);
-        formData.append("LOCATION", this.tour.LOCATION);
-        formData.append("DEPOSIT_PERCENTAGE", this.tour.DEPOSIT_PERCENTAGE);
-
-        formData.append(
-          "CUSTOM_ATTRIBUTES[HOTEL]",
-          this.tour.CUSTOM_ATTRIBUTES.HOTEL
-        );
-        formData.append(
-          "CUSTOM_ATTRIBUTES[RESTAURANT]",
-          this.tour.CUSTOM_ATTRIBUTES.RESTAURANT
-        );
-        formData.append(
-          "CUSTOM_ATTRIBUTES[VISIT_PLACE]",
-          this.tour.CUSTOM_ATTRIBUTES.VISIT_PLACE
-        );
-        formData.append(
-          "CUSTOM_ATTRIBUTES[VEHICLE_PERSENAL]",
-          this.tour.CUSTOM_ATTRIBUTES.VEHICLE_PERSENAL
-        );
-        formData.append(
-          "CUSTOM_ATTRIBUTES[NOTE]",
-          this.tour.CUSTOM_ATTRIBUTES.NOTE
-        );
-
-        // Gửi từng CALENDAR_TOUR
-        this.tour.CALENDAR_TOUR.forEach((calendar, index) => {
-          formData.append(
-            `CALENDAR_TOUR[${index}][START_DATE]`,
-            calendar.START_DATE
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][END_DATE]`,
-            calendar.END_DATE
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][START_TIME]`,
-            calendar.START_TIME
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][AVAILABLE]`,
-            calendar.AVAILABLE
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][AVAILABLE_SLOTS]`,
-            Number(calendar.AVAILABLE_SLOTS)
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][NumberOfDay]`,
-            Number(calendar.NumberOfDay)
-          );
-          formData.append(
-            `CALENDAR_TOUR[${index}][NumberOfNight]`,
-            Number(calendar.NumberOfNight)
-          );
-        });
-
-        // Đính kèm mỗi tệp đã chọn vào formData với tên là 'IMAGES[]'
-        if (this.selectedFiles.length > 0) {
-          this.selectedFiles.forEach((file) => {
-            formData.append("IMAGES[]", file);
-          });
-        }
-
-        // Đính kèm ID_TOUR_GUIDE_SUPERVISOR
-        this.ID_TOUR_GUIDE_SUPERVISOR.forEach((id) => {
-          formData.append("ID_TOUR_GUIDE_SUPERVISOR[]", id);
-        });
-
-        const response = await axios.post(
-          "http://localhost:3000/tours/",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        toast.success("Tạo tour thành công!!!");
-        console.log(response.data);
-      } catch (error) {
-        console.error("Error creating tour:", error);
-        alert("Failed to create tour. Please try again.");
-      }
-    },
-  },
+// Hàm kiểm tra checkbox
+const isChecked = (userId) => {
+  ID_TOUR_GUIDE_SUPERVISOR.value = ID_TOUR_CHECKED.value;
+  return ID_TOUR_GUIDE_SUPERVISOR.value.includes(userId);
 };
+// Hàm xử lý thay đổi file
+const onChaneFile = (event) => {
+  const files = Array.from(event.target.files);
+
+  // Thêm ảnh từ thiết bị vào danh sách IMAGES
+  const newImages = files.map((file) => ({
+    name: file.name,
+    url: URL.createObjectURL(file), // Tạo URL tạm thời cho hình ảnh từ thiết bị
+  }));
+
+  // Kết hợp ảnh hiện có và ảnh mới
+  tour.value.IMAGES = [...tour.value.IMAGES, ...newImages];
+};
+
+const toggleSupervisor = (userId) => {
+  const index = ID_TOUR_GUIDE_SUPERVISOR.value.indexOf(userId);
+  if (index > -1) {
+    // Nếu đã tồn tại, xóa ID
+    ID_TOUR_GUIDE_SUPERVISOR.value.splice(index, 1);
+    console.log(ID_TOUR_GUIDE_SUPERVISOR.value);
+  } else {
+    // Nếu chưa tồn tại, thêm ID
+    console.log(ID_TOUR_GUIDE_SUPERVISOR.value);
+
+    ID_TOUR_GUIDE_SUPERVISOR.value.push(userId);
+  }
+};
+const addCalendar = () => {
+  tour.value.CALENDAR_TOUR.push({
+    START_DATE: "",
+    END_DATE: "",
+    START_TIME: "",
+    AVAILABLE_SLOTS: 30,
+    NumberOfDay: 3,
+    NumberOfNight: 2,
+  });
+};
+
+const removeCalendar = (index) => {
+  tour.value.CALENDAR_TOUR.splice(index, 1);
+};
+// Hàm lấy chi tiết tour
+const getTourDetails = async () => {
+  try {
+    const token = localStorage.getItem("Token");
+
+    const response = await axios.get(`http://localhost:3000/tours/${tourId}`, {
+      params: { _id: tourId },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    tour.value = {
+      ...response.data.tour,
+      IMAGES: response.data.tour.IMAGES, // Đặt lại IMAGES từ API
+      CALENDAR_TOUR: response.data.tour.CALENDAR_TOUR.map((calendar) => ({
+        ...calendar,
+        START_DATE: new Date(calendar.START_DATE).toISOString().split("T")[0],
+        END_DATE: new Date(calendar.END_DATE).toISOString().split("T")[0],
+      })),
+    };
+
+    // // Cập nhật ID_TOUR_GUIDE_SUPERVISOR
+    ID_TOUR_CHECKED.value =
+      response.data.tour.ID_TOUR_GUIDE_SUPERVISOR.map((e) => {
+        return e._id;
+      }) || [];
+    // console.log("ID_TOUR_GUIDE_SUPERVISOR", ID_TOUR_GUIDE_SUPERVISOR.value);
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin tour:", error);
+    toast.error("Không thể tải thông tin tour.");
+  }
+};
+const updateEndDate = (index) => {
+  const calendar = tour.value.CALENDAR_TOUR[index];
+  const startDate = new Date(calendar.START_DATE);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + calendar.NumberOfDay);
+  tour.value.CALENDAR_TOUR[index].END_DATE = endDate
+    .toISOString()
+    .split("T")[0];
+};
+// Hàm lấy danh sách người dùng có vai trò hướng dẫn viên
+const getRoleUser = async () => {
+  try {
+    const token = localStorage.getItem("Token");
+    const body = { role: true };
+    const response = await axios.post(
+      "http://localhost:3000/users/role",
+      body,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // Gán dữ liệu trả về vào userRoles
+    userRoles.value = response.data.data;
+
+    // Lọc các user có ít nhất một role là true và thêm vào ID_TOUR_GUIDE_SUPERVISOR
+    ID_TOUR_GUIDE_SUPERVISOR.value = userRoles.value
+      .filter((user) => Object.values(user.ROLE).some((role) => role))
+      .map((user) => user._id.toString());
+
+    console.log("ID_TOUR_GUIDE_SUPERVISOR:", ID_TOUR_GUIDE_SUPERVISOR.value);
+  } catch (error) {
+    console.error("Error fetching user roles:", error);
+  }
+};
+const removeImage = (index) => {
+  if (tour.value.IMAGES.length > 1) {
+    tour.value.IMAGES.splice(index, 1);
+  } else {
+    toast.error("Cần ít nhất 1 ảnh!");
+  }
+};
+
+// Hàm cập nhật thông tin tour
+const updateTour = async () => {
+  try {
+    const token = localStorage.getItem("Token");
+
+    // Chuẩn bị payload
+    const payload = {
+      ...tour.value,
+      ID_TOUR: tourId,
+      ID_TOUR_GUIDE_SUPERVISOR: ID_TOUR_GUIDE_SUPERVISOR.value,
+    };
+    console.log(payload);
+    // Gọi API để cập nhật tour
+    await axios.put(`http://localhost:3000/tours/${tourId}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    toast.success("Cập nhật tour thành công!");
+    router.push("/admin/about");
+  } catch (error) {
+    console.error("Lỗi khi cập nhật tour:", error);
+    toast.error("Cập nhật tour thất bại!");
+  }
+};
+
+// Gọi các hàm lấy dữ liệu khi component được mounted
+onMounted(() => {
+  getTourDetails();
+  getRoleUser();
+});
 </script>
 
 <style scoped>
@@ -559,5 +576,37 @@ button:hover {
 .createTour {
   background-color: rgba(13, 139, 236, 0.8);
   margin-bottom: 20px;
+}
+.selected-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  position: relative;
+}
+
+.delete-image-btn {
+  position: absolute;
+  top: -5px;
+  right: 5px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  margin: 0;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.delete-image-btn:hover {
+  background-color: darkred;
 }
 </style>
