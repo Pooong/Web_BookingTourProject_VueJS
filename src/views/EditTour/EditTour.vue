@@ -248,15 +248,21 @@
 </template>
 
 <script setup>
+// Existing imports...
 import axios from "axios";
 import { useRoute, useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, reactive } from "vue";
 
 // Khai báo các biến và hàm
 const route = useRoute();
 const router = useRouter();
 const tourId = route.params.id; // Lấy ID từ URL
+console.log(tourId);
+// Initial tour data to compare changes
+let initialTourData = reactive({});
+
+// Existing tour object
 const tour = ref({
   TOUR_NAME: "",
   TYPE: "",
@@ -284,33 +290,24 @@ const tour = ref({
     VEHICLE_PERSENAL: "",
     NOTE: "",
   },
-  selectedFiles: [],
-  minDate: new Date().toISOString().split("T")[0],
   DEPOSIT_PERCENTAGE: 30,
 });
 const userRoles = ref([]);
 const ID_TOUR_GUIDE_SUPERVISOR = ref([]);
 const ID_TOUR_CHECKED = ref([]);
+const selectedFiles = ref([]);
+// Hàm kiểm tra sự thay đổi của dữ liệu
+const getChangedData = (currentData, initialData) => {
+  const changedData = {};
 
-// Hàm kiểm tra checkbox
-const isChecked = (userId) => {
-  ID_TOUR_GUIDE_SUPERVISOR.value = ID_TOUR_CHECKED.value;
-  return ID_TOUR_GUIDE_SUPERVISOR.value.includes(userId);
+  Object.keys(currentData).forEach((key) => {
+    if (JSON.stringify(currentData[key]) !== JSON.stringify(initialData[key])) {
+      changedData[key] = currentData[key];
+    }
+  });
+
+  return changedData;
 };
-// Hàm xử lý thay đổi file
-const onChaneFile = (event) => {
-  const files = Array.from(event.target.files);
-
-  // Thêm ảnh từ thiết bị vào danh sách IMAGES
-  const newImages = files.map((file) => ({
-    name: file.name,
-    url: URL.createObjectURL(file), // Tạo URL tạm thời cho hình ảnh từ thiết bị
-  }));
-
-  // Kết hợp ảnh hiện có và ảnh mới
-  tour.value.IMAGES = [...tour.value.IMAGES, ...newImages];
-};
-
 const toggleSupervisor = (userId) => {
   const index = ID_TOUR_GUIDE_SUPERVISOR.value.indexOf(userId);
   if (index > -1) {
@@ -324,63 +321,94 @@ const toggleSupervisor = (userId) => {
     ID_TOUR_GUIDE_SUPERVISOR.value.push(userId);
   }
 };
-const addCalendar = () => {
-  tour.value.CALENDAR_TOUR.push({
-    START_DATE: "",
-    END_DATE: "",
-    START_TIME: "",
-    AVAILABLE_SLOTS: 30,
-    NumberOfDay: 3,
-    NumberOfNight: 2,
-  });
-};
-
-const removeCalendar = (index) => {
-  tour.value.CALENDAR_TOUR.splice(index, 1);
-};
-// Hàm lấy chi tiết tour
-const getTourDetails = async () => {
+// Hàm xử lý cập nhật tour chỉ với các trường đã thay đổi
+const updateTour = async () => {
   try {
     const token = localStorage.getItem("Token");
 
-    const response = await axios.get(`http://localhost:3000/tours/${tourId}`, {
-      params: { _id: tourId },
+    // Lấy dữ liệu đã thay đổi so với dữ liệu ban đầu
+    const changedData = getChangedData(tour.value, initialTourData);
+
+    if (
+      Object.keys(changedData).length === 0 &&
+      selectedFiles.value.length === 0
+    ) {
+      toast.info("Không có thay đổi nào!");
+      return;
+    }
+
+    // Chuẩn bị FormData cho các trường đã thay đổi
+    const formData = new FormData();
+    formData.append("ID_TOUR", tourId);
+
+    Object.keys(changedData).forEach((key) => {
+      if (key === "IMAGES") {
+        changedData[key].forEach((image) => {
+          // Đính kèm mỗi tệp đã chọn vào formData với tên là 'IMAGES[]'
+          if (selectedFiles.value.length > 0) {
+            selectedFiles.value.forEach((file) => {
+              formData.append("IMAGES[]", file);
+            });
+          } else {
+            changedData[key].forEach((image) => {
+              formData.append("IMAGES[]", image);
+            });
+          }
+        });
+      } else if (key === "CALENDAR_TOUR") {
+        changedData[key].forEach((calendar, index) => {
+          formData.append(
+            `CALENDAR_TOUR[${index}][START_DATE]`,
+            calendar.START_DATE
+          );
+          formData.append(
+            `CALENDAR_TOUR[${index}][END_DATE]`,
+            calendar.END_DATE
+          );
+          formData.append(
+            `CALENDAR_TOUR[${index}][START_TIME]`,
+            calendar.START_TIME
+          );
+          formData.append(
+            `CALENDAR_TOUR[${index}][AVAILABLE_SLOTS]`,
+            calendar.AVAILABLE_SLOTS
+          );
+          formData.append(
+            `CALENDAR_TOUR[${index}][NumberOfDay]`,
+            calendar.NumberOfDay
+          );
+          formData.append(
+            `CALENDAR_TOUR[${index}][NumberOfNight]`,
+            calendar.NumberOfNight
+          );
+        });
+      } else if (key === "CUSTOM_ATTRIBUTES") {
+        Object.keys(changedData[key]).forEach((subKey) => {
+          formData.append(
+            `CUSTOM_ATTRIBUTES[${subKey}]`,
+            changedData[key][subKey]
+          );
+        });
+      } else {
+        formData.append(key, changedData[key]);
+      }
+    });
+
+    await axios.put(`http://localhost:3000/tours/edit/${tourId}`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
       },
     });
 
-    tour.value = {
-      ...response.data.tour,
-      IMAGES: response.data.tour.IMAGES, // Đặt lại IMAGES từ API
-      CALENDAR_TOUR: response.data.tour.CALENDAR_TOUR.map((calendar) => ({
-        ...calendar,
-        START_DATE: new Date(calendar.START_DATE).toISOString().split("T")[0],
-        END_DATE: new Date(calendar.END_DATE).toISOString().split("T")[0],
-      })),
-    };
-
-    // // Cập nhật ID_TOUR_GUIDE_SUPERVISOR
-    ID_TOUR_CHECKED.value =
-      response.data.tour.ID_TOUR_GUIDE_SUPERVISOR.map((e) => {
-        return e._id;
-      }) || [];
-    // console.log("ID_TOUR_GUIDE_SUPERVISOR", ID_TOUR_GUIDE_SUPERVISOR.value);
+    toast.success("Cập nhật tour thành công!");
+    router.push("/admin/about");
   } catch (error) {
-    console.error("Lỗi khi lấy thông tin tour:", error);
-    toast.error("Không thể tải thông tin tour.");
+    console.error("Lỗi khi cập nhật tour:", error);
+    toast.error("Cập nhật tour thất bại!");
   }
 };
-const updateEndDate = (index) => {
-  const calendar = tour.value.CALENDAR_TOUR[index];
-  const startDate = new Date(calendar.START_DATE);
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + calendar.NumberOfDay);
-  tour.value.CALENDAR_TOUR[index].END_DATE = endDate
-    .toISOString()
-    .split("T")[0];
-};
-// Hàm lấy danh sách người dùng có vai trò hướng dẫn viên
+
 const getRoleUser = async () => {
   try {
     const token = localStorage.getItem("Token");
@@ -415,41 +443,64 @@ const removeImage = (index) => {
     toast.error("Cần ít nhất 1 ảnh!");
   }
 };
+const isChecked = (userId) => {
+  ID_TOUR_GUIDE_SUPERVISOR.value = ID_TOUR_CHECKED.value;
+  return ID_TOUR_GUIDE_SUPERVISOR.value.includes(userId);
+};
+// Hàm xử lý thay đổi file
+// Hàm xử lý thay đổi tệp
+const onChaneFile = (event) => {
+  selectedFiles.value = Array.from(event.target.files);
+  const newImages = selectedFiles.value.map((file) => ({
+    name: file.name,
+    url: URL.createObjectURL(file),
+  }));
 
-// Hàm cập nhật thông tin tour
-const updateTour = async () => {
+  // Cập nhật ảnh trong tour.IMAGES
+  tour.value.IMAGES = [...tour.value.IMAGES, ...newImages];
+};
+// Hàm lấy chi tiết tour và gán vào initialTourData
+const getTourDetails = async () => {
   try {
     const token = localStorage.getItem("Token");
 
-    // Chuẩn bị payload
-    const payload = {
-      ...tour.value,
-      ID_TOUR: tourId,
-      ID_TOUR_GUIDE_SUPERVISOR: ID_TOUR_GUIDE_SUPERVISOR.value,
-    };
-    console.log(payload);
-    // Gọi API để cập nhật tour
-    await axios.put(`http://localhost:3000/tours/${tourId}`, payload, {
+    const response = await axios.get(`http://localhost:3000/tours/${tourId}`, {
+      params: {
+        id: tourId,
+      },
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-    toast.success("Cập nhật tour thành công!");
-    router.push("/admin/about");
+    // Gán dữ liệu ban đầu cho initialTourData
+    initialTourData = { ...response.data.tour };
+
+    // Gán lại dữ liệu tour hiện tại
+    tour.value = {
+      ...response.data.tour,
+      IMAGES: response.data.tour.IMAGES,
+      CALENDAR_TOUR: response.data.tour.CALENDAR_TOUR.map((calendar) => ({
+        ...calendar,
+        START_DATE: new Date(calendar.START_DATE).toISOString().split("T")[0],
+        END_DATE: new Date(calendar.END_DATE).toISOString().split("T")[0],
+      })),
+    };
+
+    ID_TOUR_CHECKED.value =
+      response.data.tour.ID_TOUR_GUIDE_SUPERVISOR.map((e) => e._id) || [];
   } catch (error) {
-    console.error("Lỗi khi cập nhật tour:", error);
-    toast.error("Cập nhật tour thất bại!");
+    console.error("Lỗi khi lấy thông tin tour:", error);
+    toast.error("Không thể tải thông tin tour.");
   }
 };
 
-// Gọi các hàm lấy dữ liệu khi component được mounted
+// Gọi các hàm khi component được mounted
 onMounted(() => {
   getTourDetails();
   getRoleUser();
 });
 </script>
-
 <style scoped>
 .groupAttribute {
   border-radius: 5px;
