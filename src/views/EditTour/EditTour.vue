@@ -321,6 +321,19 @@ const toggleSupervisor = (userId) => {
     ID_TOUR_GUIDE_SUPERVISOR.value.push(userId);
   }
 };
+const addCalendar = () => {
+  tour.value.CALENDAR_TOUR.push({
+    START_DATE: "",
+    END_DATE: "",
+    START_TIME: "",
+    AVAILABLE_SLOTS: 30,
+    NumberOfDay: 3,
+    NumberOfNight: 2,
+  });
+};
+const removeCalendar = (index) => {
+  tour.value.CALENDAR_TOUR.splice(index, 1);
+};
 // Hàm xử lý cập nhật tour chỉ với các trường đã thay đổi
 const updateTour = async () => {
   try {
@@ -329,9 +342,10 @@ const updateTour = async () => {
     // Lấy dữ liệu đã thay đổi so với dữ liệu ban đầu
     const changedData = getChangedData(tour.value, initialTourData);
 
+    // Kiểm tra nếu không có thay đổi nào và không có ảnh mới để gửi
     if (
       Object.keys(changedData).length === 0 &&
-      selectedFiles.value.length === 0
+      tour.value.IMAGES.every((image) => !image.isNew)
     ) {
       toast.info("Không có thay đổi nào!");
       return;
@@ -341,20 +355,17 @@ const updateTour = async () => {
     const formData = new FormData();
     formData.append("ID_TOUR", tourId);
 
+    // Thêm các ảnh mới vào FormData
+    tour.value.IMAGES.forEach((image) => {
+      if (image.isNew) {
+        formData.append("IMAGES[]", image.file);
+      }
+    });
+
+    // Thêm các trường khác đã thay đổi vào FormData
     Object.keys(changedData).forEach((key) => {
-      if (key === "IMAGES") {
-        changedData[key].forEach((image) => {
-          // Đính kèm mỗi tệp đã chọn vào formData với tên là 'IMAGES[]'
-          if (selectedFiles.value.length > 0) {
-            selectedFiles.value.forEach((file) => {
-              formData.append("IMAGES[]", file);
-            });
-          } else {
-            changedData[key].forEach((image) => {
-              formData.append("IMAGES[]", image);
-            });
-          }
-        });
+      if (key !== "IMAGES" && key !== "CALENDAR_TOUR") {
+        formData.append(key, changedData[key]);
       } else if (key === "CALENDAR_TOUR") {
         changedData[key].forEach((calendar, index) => {
           formData.append(
@@ -382,18 +393,10 @@ const updateTour = async () => {
             calendar.NumberOfNight
           );
         });
-      } else if (key === "CUSTOM_ATTRIBUTES") {
-        Object.keys(changedData[key]).forEach((subKey) => {
-          formData.append(
-            `CUSTOM_ATTRIBUTES[${subKey}]`,
-            changedData[key][subKey]
-          );
-        });
-      } else {
-        formData.append(key, changedData[key]);
       }
     });
 
+    // Gửi yêu cầu cập nhật
     await axios.put(`http://localhost:3000/tours/edit/${tourId}`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -437,28 +440,44 @@ const getRoleUser = async () => {
   }
 };
 const removeImage = (index) => {
+  // Kiểm tra nếu mảng IMAGES có hơn 1 ảnh thì mới cho phép xóa
   if (tour.value.IMAGES.length > 1) {
     tour.value.IMAGES.splice(index, 1);
   } else {
-    toast.error("Cần ít nhất 1 ảnh!");
+    // Hiển thị thông báo nếu chỉ còn 1 ảnh và không thể xóa thêm
+    toast.error("Không thể xóa hết ảnh! Phải có ít nhất một ảnh.");
   }
 };
+
 const isChecked = (userId) => {
   ID_TOUR_GUIDE_SUPERVISOR.value = ID_TOUR_CHECKED.value;
   return ID_TOUR_GUIDE_SUPERVISOR.value.includes(userId);
 };
 // Hàm xử lý thay đổi file
-// Hàm xử lý thay đổi tệp
 const onChaneFile = (event) => {
-  selectedFiles.value = Array.from(event.target.files);
-  const newImages = selectedFiles.value.map((file) => ({
-    name: file.name,
+  const files = Array.from(event.target.files);
+  const newImages = files.map((file) => ({
+    file,
     url: URL.createObjectURL(file),
+    isNew: true,
   }));
 
-  // Cập nhật ảnh trong tour.IMAGES
+  // Cập nhật vào mảng selectedFiles và tour.IMAGES
+  selectedFiles.value = [...selectedFiles.value, ...files];
   tour.value.IMAGES = [...tour.value.IMAGES, ...newImages];
 };
+const updateEndDate = (index) => {
+  const calendar = tour.value.CALENDAR_TOUR[index];
+  if (calendar.START_DATE && calendar.NumberOfDay) {
+    // Tạo ngày bắt đầu từ START_DATE
+    const startDate = new Date(calendar.START_DATE);
+    // Cộng thêm số ngày để tính END_DATE
+    startDate.setDate(startDate.getDate() + calendar.NumberOfDay - 1);
+    // Cập nhật giá trị END_DATE
+    calendar.END_DATE = startDate.toISOString().split("T")[0];
+  }
+};
+
 // Hàm lấy chi tiết tour và gán vào initialTourData
 const getTourDetails = async () => {
   try {
@@ -486,6 +505,10 @@ const getTourDetails = async () => {
         END_DATE: new Date(calendar.END_DATE).toISOString().split("T")[0],
       })),
     };
+    tour.value.IMAGES = response.data.tour.IMAGES.map((image) => ({
+      url: image,
+      isNew: false, // Đánh dấu là ảnh đã có
+    }));
 
     ID_TOUR_CHECKED.value =
       response.data.tour.ID_TOUR_GUIDE_SUPERVISOR.map((e) => e._id) || [];
