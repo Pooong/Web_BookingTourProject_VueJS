@@ -339,10 +339,16 @@ const updateTour = async () => {
   try {
     const token = localStorage.getItem("Token");
 
+    // Kiểm tra nếu không có ảnh nào thì báo lỗi
+    if (tour.value.IMAGES.length === 0) {
+      toast.error("Vui lòng chọn ít nhất 1 ảnh!");
+      return;
+    }
+
     // Lấy dữ liệu đã thay đổi so với dữ liệu ban đầu
     const changedData = getChangedData(tour.value, initialTourData);
 
-    // Kiểm tra nếu không có thay đổi nào và không có ảnh mới để gửi
+    // Kiểm tra nếu không có thay đổi nào
     if (
       Object.keys(changedData).length === 0 &&
       tour.value.IMAGES.every((image) => !image.isNew)
@@ -355,13 +361,45 @@ const updateTour = async () => {
     const formData = new FormData();
     formData.append("ID_TOUR", tourId);
 
-    // Thêm các ảnh mới vào FormData
+    // Thêm ảnh cũ (chưa bị xóa) vào FormData
     tour.value.IMAGES.forEach((image) => {
-      if (image.isNew) {
-        formData.append("IMAGES[]", image.file);
+      if (!image.isNew) {
+        formData.append("IMAGES[]", image.url); // Gửi URL của ảnh cũ
       }
     });
 
+    // Thêm ảnh mới vào FormData
+    tour.value.IMAGES.forEach((image) => {
+      if (image.isNew) {
+        formData.append("IMAGES[]", image.file); // Gửi file của ảnh mới
+      }
+    });
+
+    // Adding fields in CUSTOM_ATTRIBUTES to FormData
+    formData.append(
+      "CUSTOM_ATTRIBUTES[HOTEL]",
+      tour.value.CUSTOM_ATTRIBUTES.HOTEL
+    );
+    formData.append(
+      "CUSTOM_ATTRIBUTES[RESTAURANT]",
+      tour.value.CUSTOM_ATTRIBUTES.RESTAURANT
+    );
+    formData.append(
+      "CUSTOM_ATTRIBUTES[VEHICLE_PERSENAL]",
+      tour.value.CUSTOM_ATTRIBUTES.VEHICLE_PERSENAL
+    );
+    formData.append(
+      "CUSTOM_ATTRIBUTES[NOTE]",
+      tour.value.CUSTOM_ATTRIBUTES.NOTE
+    );
+    formData.append(
+      "CUSTOM_ATTRIBUTES[VISIT_PLACE][0]",
+      tour.value.CUSTOM_ATTRIBUTES.VISIT_PLACE
+    );
+    // For VISIT_PLACE array, add each place individually
+    // tour.value.CUSTOM_ATTRIBUTES.VISIT_PLACE.forEach((place, index) => {
+    //   formData.append(`CUSTOM_ATTRIBUTES[VISIT_PLACE][0]`, place);
+    // });
     // Thêm các trường khác đã thay đổi vào FormData
     Object.keys(changedData).forEach((key) => {
       if (key !== "IMAGES" && key !== "CALENDAR_TOUR") {

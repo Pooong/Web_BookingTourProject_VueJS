@@ -163,12 +163,12 @@ const totalStaff = ref(0);
 const showDetailModal = ref(false);
 const selectedOrder = ref({});
 const isLogin = localStorage.getItem("isLogin");
-
+const totalBooking = ref(0);
 // Card information
 const cards = [
   {
     name: "Đơn đặt tour",
-    value: totalOrder,
+    value: totalBooking,
     icon: "fa-solid fa-cart-shopping",
     bgColor: "",
     color: "",
@@ -196,6 +196,17 @@ const cards = [
   },
 ];
 
+const fetchTotalBooking = () => {
+  axios
+    .get("http://localhost:3000/booking/total-bookings")
+    .then((res) => {
+      if (res.data.success) {
+        totalBooking.value = res.data.data;
+        console.log(totalBooking.value);
+      }
+    })
+    .catch((err) => console.log(err));
+};
 // Fetch booking data
 const fetchData = () => {
   axios
@@ -210,13 +221,30 @@ const fetchData = () => {
 
 // Fetch dashboard data
 const dashBoard = () => {
+  const token = localStorage.getItem("Token");
   axios
-    .get("http://localhost:3000/customer/dashboard")
+    .get("http://localhost:3000/users/getAllUsers?tabStatus=4", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
     .then((res) => {
-      totalOrder.value = res.data.order.length;
-      totalPending.value = res.data.orderPending.length;
-      totalCustomer.value = res.data.user;
-      totalStaff.value = res.data.staff;
+      if (res.data.success) {
+        const users = res.data.data;
+
+        // Đếm tổng khách hàng và nhân viên
+        totalCustomer.value = users.filter((user) =>
+          Object.values(user.ROLE).every((role) => !role)
+        ).length;
+
+        totalStaff.value = users.filter(
+          (user) =>
+            user.ROLE.BRANCH_MANAGER || user.ROLE.STAFF || user.ROLE.ADMIN
+        ).length;
+
+        console.log("Total Customers:", totalCustomer.value);
+        console.log("Total Staff:", totalStaff.value);
+      }
     })
     .catch((err) => console.log(err));
 };
@@ -267,6 +295,7 @@ const getStatusClass = (status) => {
 // Initial data fetch
 fetchData();
 dashBoard();
+fetchTotalBooking();
 </script>
 
 <style scoped>

@@ -29,7 +29,7 @@
         <span class="material-icons"><i class="fa-solid fa-users"></i></span>
         <span class="text">Người dùng</span>
       </router-link>
-      <router-link to="/admin/history" class="button">
+      <router-link to="/admin/revenue-statistics" class="button">
         <span class="material-icons"><i class="fa-solid fa-clock"></i></span>
         <span class="text">Doanh thu</span>
       </router-link>

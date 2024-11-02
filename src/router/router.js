@@ -10,7 +10,8 @@ import InfoAdmin from "@/views/InfoAdmin/InfoAdmin.vue";
 import AddTour from "@/views/AddTourAdmin/AddTourAdmin.vue";
 import Customer from "@/views/Customer/Customer.vue";
 import EditTour from "@/views/EditTour/EditTour.vue";
-
+import RevenueStatistics from "@/views/RevenueStatistics/RevenueStatistics.vue";
+import Chat from "../components/Chat/Chat.vue";
 const routes = [
   // router Admin
   {
@@ -27,6 +28,7 @@ const routes = [
       layout: AuthLayout,
     },
   },
+
   {
     path: "/admin/about",
     component: AboutAdmin,
@@ -58,6 +60,20 @@ const routes = [
   {
     path: "/admin/customer",
     component: Customer,
+    meta: {
+      layout: AdminLayout,
+    },
+  },
+  {
+    path: "/admin/revenue-statistics",
+    component: RevenueStatistics,
+    meta: {
+      layout: AdminLayout,
+    },
+  },
+  {
+    path: "/chat",
+    component: Chat,
     meta: {
       layout: AdminLayout,
     },
