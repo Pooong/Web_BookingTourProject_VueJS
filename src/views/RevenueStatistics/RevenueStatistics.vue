@@ -1,236 +1,355 @@
 <template>
-  <div class="revenue-statistics">
-    <h1>Thống kê doanh thu</h1>
+  <div class="containPage">
+    <h2>Quản lý doanh thu</h2>
+    <div class="contentPage" v-if="isLogin">
+      <!-- Bộ lọc chọn tháng và năm cho doanh thu hàng tháng -->
+      <div v-if="activeKey === '1'" class="filter-container pt-4">
+        <a-date-picker
+          v-model="selectedDate"
+          picker="month"
+          placeholder="Chọn tháng và năm"
+          @change="handleDateChange"
+        />
+        <a-button type="primary" @click="fetchMonthlyRevenue">
+          Thống kê
+        </a-button>
+      </div>
 
-    <!-- Tổng doanh thu -->
-    <div class="statistics-section">
-      <button @click="toggleSection('totalRevenue')">Tổng Doanh Thu</button>
-      <p v-if="showTotalRevenue && totalRevenue !== null">
-        Tổng doanh thu: {{ formatCurrency(totalRevenue) }}
-      </p>
-    </div>
+      <!-- Bộ lọc chọn năm cho tổng doanh thu -->
+      <div v-if="activeKey === '3'" class="filter-container pt-4">
+        <a-date-picker
+          v-model="selectedYearDate"
+          picker="year"
+          placeholder="Chọn năm"
+          @change="handleYearChange"
+        />
+        <a-button type="primary" @click="fetchTotalRevenue">
+          Thống kê
+        </a-button>
+      </div>
 
-    <!-- Doanh thu theo tour -->
-    <div class="statistics-section">
-      <button @click="toggleSection('revenuePerTour')">
-        Doanh Thu Theo Tour
-      </button>
-      <ul v-if="showRevenuePerTour && revenuePerTour.length">
-        <li v-for="(tour, index) in revenuePerTour" :key="index">
-          Tour: {{ tour.tourName }} - Doanh thu:
-          {{ formatCurrency(tour.revenue) }}
-        </li>
-      </ul>
-    </div>
+      <!-- Bộ lọc chọn ngày/tháng/năm cho doanh thu theo ngày -->
+      <div v-if="activeKey === '4'" class="filter-container pt-4">
+        <a-date-picker
+          v-model="selectedFullDate"
+          placeholder="Chọn ngày, tháng, năm"
+          @change="handleFullDateChange"
+        />
+        <a-button type="primary" @click="fetchDailyRevenue">
+          Thống kê
+        </a-button>
+      </div>
 
-    <!-- Doanh thu theo loại tour -->
-    <div class="statistics-section">
-      <button @click="toggleSection('revenueByType')">
-        Doanh Thu Theo Loại Tour
-      </button>
-      <ul v-if="showRevenueByType && revenueByType.length">
-        <li v-for="(type, index) in revenueByType" :key="index">
-          Loại: {{ type._id }} - Doanh thu: {{ formatCurrency(type.revenue) }}
-        </li>
-      </ul>
-    </div>
+      <a-tabs v-model:activeKey="activeKey">
+        <!-- Tab Doanh thu hàng tháng -->
+        <a-tab-pane key="1" tab="Doanh thu hàng tháng">
+          <a-table
+            :dataSource="[monthlyRevenue]"
+            :columns="monthlyColumns"
+            rowKey="month"
+          />
+        </a-tab-pane>
 
-    <!-- Doanh thu theo tháng -->
-    <div class="statistics-section">
-      <button @click="toggleSection('monthlyRevenue')">
-        Doanh Thu Theo Tháng
-      </button>
-      <ul v-if="showMonthlyRevenue && monthlyRevenue.length">
-        <li v-for="(month, index) in monthlyRevenue" :key="index">
-          Tháng: {{ month._id }} - Doanh thu:
-          {{ formatCurrency(month.monthlyRevenue) }}
-        </li>
-      </ul>
+        <!-- Tab Doanh thu từng tour -->
+        <a-tab-pane key="2" tab="Doanh thu từng tour">
+          <a-table
+            :dataSource="perTourRevenue"
+            :columns="perTourColumns"
+            rowKey="_id"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'tourImage'">
+                <div class="tour-image-cell">
+                  <img
+                    v-for="image in record.tourImage"
+                    :key="image"
+                    :src="image"
+                    alt="Tour Image"
+                  />
+                </div>
+              </template>
+              <template v-else-if="column.key === 'totalRevenue'">
+                {{ formatCurrency(record.totalRevenue) }}
+              </template>
+              <template v-else>
+                {{ record[column.dataIndex] }}
+              </template>
+            </template>
+          </a-table>
+        </a-tab-pane>
+
+        <!-- Tab Tổng doanh thu -->
+        <a-tab-pane key="3" tab="Tổng doanh thu">
+          <div class="total-revenue">
+            <h3>Tổng doanh thu: {{ formatCurrency(totalRevenue) }}</h3>
+          </div>
+        </a-tab-pane>
+
+        <!-- Tab Doanh thu theo ngày -->
+        <a-tab-pane key="4" tab="Doanh thu theo ngày">
+          <a-table
+            :dataSource="dailyRevenue"
+            :columns="dailyColumns"
+            rowKey="day"
+          />
+        </a-tab-pane>
+      </a-tabs>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from "vue";
 import axios from "axios";
 
-export default {
-  data() {
-    return {
-      totalRevenue: null,
-      revenuePerTour: [],
-      revenueByType: [],
-      monthlyRevenue: [],
-      showTotalRevenue: false,
-      showRevenuePerTour: false,
-      showRevenueByType: false,
-      showMonthlyRevenue: false,
-    };
+const activeKey = ref("1");
+const isLogin = ref(localStorage.getItem("isLogin"));
+const token = localStorage.getItem("Token");
+
+// Dữ liệu cho bảng
+const monthlyRevenue = ref({});
+const perTourRevenue = ref([]);
+const totalRevenue = ref(0);
+const dailyRevenue = ref([]);
+
+// Lựa chọn của người dùng
+const selectedDate = ref(null); // Ngày/tháng cho doanh thu hàng tháng
+const selectedYearDate = ref(null); // Năm cho tổng doanh thu
+const selectedFullDate = ref(null); // Ngày/tháng/năm cho doanh thu theo ngày
+const selectedMonth = ref(null);
+const selectedYear = ref(null);
+const selectedDay = ref(null);
+
+// Cấu hình cột cho bảng
+const monthlyColumns = [
+  { title: "Tháng", dataIndex: "month", key: "month" },
+  { title: "Năm", dataIndex: "year", key: "year" },
+  {
+    title: "Doanh thu",
+    dataIndex: "revenue",
+    key: "revenue",
+    customRender: ({ text }) => formatCurrency(text),
   },
-  methods: {
-    async fetchTotalRevenue() {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/tours/revenue/total"
-        );
-        this.totalRevenue = response.data.totalRevenue;
-      } catch (error) {
-        console.error("Error fetching total revenue:", error);
-      }
-    },
-    async fetchRevenuePerTour() {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/tours/revenue/per-tour"
-        );
-        this.revenuePerTour = response.data.data;
-      } catch (error) {
-        console.error("Error fetching revenue per tour:", error);
-      }
-    },
-    async fetchRevenueByType() {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/tours/revenue/by-type"
-        );
-        this.revenueByType = response.data.data;
-      } catch (error) {
-        console.error("Error fetching revenue by type:", error);
-      }
-    },
-    async fetchMonthlyRevenue() {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/tours/revenue/monthly"
-        );
-        this.monthlyRevenue = response.data.data;
-      } catch (error) {
-        console.error("Error fetching monthly revenue:", error);
-      }
-    },
-    toggleSection(section) {
-      if (section === "totalRevenue") {
-        this.showTotalRevenue = !this.showTotalRevenue;
-        if (this.showTotalRevenue && this.totalRevenue === null)
-          this.fetchTotalRevenue();
-      } else if (section === "revenuePerTour") {
-        this.showRevenuePerTour = !this.showRevenuePerTour;
-        if (this.showRevenuePerTour && !this.revenuePerTour.length)
-          this.fetchRevenuePerTour();
-      } else if (section === "revenueByType") {
-        this.showRevenueByType = !this.showRevenueByType;
-        if (this.showRevenueByType && !this.revenueByType.length)
-          this.fetchRevenueByType();
-      } else if (section === "monthlyRevenue") {
-        this.showMonthlyRevenue = !this.showMonthlyRevenue;
-        if (this.showMonthlyRevenue && !this.monthlyRevenue.length)
-          this.fetchMonthlyRevenue();
-      }
-    },
-    formatCurrency(value) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(value);
-    },
+];
+
+const perTourColumns = [
+  { title: "Tên tour", dataIndex: "tourName", key: "tourName" },
+  {
+    title: "Ảnh",
+    dataIndex: "tourImage",
+    key: "tourImage",
+    scopedSlots: { customRender: "tourImage" },
   },
+  {
+    title: "Tổng doanh thu",
+    dataIndex: "totalRevenue",
+    key: "totalRevenue",
+    customRender: ({ text }) => formatCurrency(text),
+  },
+];
+
+const dailyColumns = [
+  {
+    title: "Ngày",
+    key: "day",
+    customRender: ({ record }) => record._id.day,
+  },
+  {
+    title: "Tháng",
+    key: "month",
+    customRender: ({ record }) => record._id.month,
+  },
+  {
+    title: "Năm",
+    key: "year",
+    customRender: ({ record }) => record._id.year,
+  },
+  {
+    title: "Doanh thu",
+    dataIndex: "totalRevenue",
+    key: "totalRevenue",
+    customRender: ({ text }) => formatCurrency(text),
+  },
+];
+
+// Hàm gọi API để lấy dữ liệu doanh thu hàng tháng
+const fetchMonthlyRevenue = async () => {
+  try {
+    const response = await axios.get(
+      `http://localhost:3000/tours/revenue/monthly?month=${selectedMonth.value}&year=${selectedYear.value}`
+    );
+    monthlyRevenue.value = response.data;
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu doanh thu hàng tháng:", error);
+  }
 };
+
+// Hàm gọi API để lấy dữ liệu doanh thu từng tour
+const fetchPerTourRevenue = async () => {
+  try {
+    const response = await axios.get(
+      "http://localhost:3000/tours/revenue/per-tour"
+    );
+    perTourRevenue.value = response.data.data;
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu doanh thu từng tour:", error);
+  }
+};
+
+// Hàm gọi API để lấy tổng doanh thu
+const fetchTotalRevenue = async () => {
+  try {
+    const url = selectedYear.value
+      ? `http://localhost:3000/tours/revenue/total?year=${selectedYear.value}`
+      : "http://localhost:3000/tours/revenue/total";
+
+    const response = await axios.get(url);
+    dailyRevenue.value = response.data.data;
+    totalRevenue.value = response.data.totalRevenue;
+  } catch (error) {
+    console.error("Lỗi khi lấy tổng doanh thu:", error);
+  }
+};
+
+// Hàm gọi API để lấy dữ liệu doanh thu theo ngày
+const fetchDailyRevenue = async () => {
+  try {
+    let url = "http://localhost:3000/tours/revenue/dailyrevenue";
+    if (selectedYear.value) url += `?year=${selectedYear.value}`;
+    if (selectedMonth.value) url += `&month=${selectedMonth.value}`;
+    if (selectedDay.value) url += `&day=${selectedDay.value}`;
+
+    const response = await axios.get(url, {
+      params: {
+        year: selectedYear.value,
+        month: selectedMonth.value,
+        day: selectedDay.value,
+      },
+    });
+    dailyRevenue.value = response.data.data;
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu doanh thu theo ngày:", error);
+  }
+};
+
+// Xử lý thay đổi năm cho tổng doanh thu
+const handleYearChange = (date) => {
+  selectedYear.value = date ? date.year() : null;
+};
+
+// Xử lý thay đổi ngày/tháng/năm cho doanh thu theo ngày
+const handleFullDateChange = (date) => {
+  if (date) {
+    selectedDay.value = date.date();
+    selectedMonth.value = date.month() + 1; // Tháng bắt đầu từ 0 nên cần +1
+    selectedYear.value = date.year();
+    console.log("Ngày đã chọn:", selectedDay.value);
+    console.log("Tháng đã chọn:", selectedMonth.value);
+    console.log("Năm đã chọn:", selectedYear.value);
+  } else {
+    selectedDay.value = null;
+    selectedMonth.value = null;
+    selectedYear.value = null;
+  }
+};
+
+// Hàm định dạng tiền tệ
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(value);
+};
+
+// Gọi các hàm lấy dữ liệu khi component được mount
+onMounted(() => {
+  fetchPerTourRevenue();
+});
 </script>
 
-<style scoped>
-/* Your existing styles */
-.revenue-statistics {
-  max-width: 100%;
-  margin: 50px;
-  padding: 30px;
-  background-color: #f9fafb;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-family: Arial, sans-serif;
-  color: #333;
-}
-
-.revenue-statistics h1 {
-  text-align: center;
-  color: #0056b3;
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-.statistics-section {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  background-color: #ffffff;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.statistics-section:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
-
-.statistics-section p,
-.statistics-section ul {
-  font-size: 18px;
-  margin: 15px 0;
-}
-
-.statistics-section ul {
-  list-style: none;
-  padding: 0;
-}
-
-.statistics-section li {
-  background-color: #f1f8ff;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.statistics-section li:last-child {
-  margin-bottom: 0;
-}
-
-button {
-  background-color: #007bff;
-  color: #ffffff;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-button:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
-}
-
-button:active {
-  background-color: #004494;
-  transform: translateY(0);
-}
-
-ul li span {
-  color: #007bff;
-  font-weight: bold;
-}
-
-@media (max-width: 600px) {
-  .revenue-statistics {
-    padding: 20px;
+<style lang="scss" scoped>
+.containPage {
+  padding: 20px 30px;
+  .contentPage {
+    padding: 0 20px 20px 20px;
+    border-radius: 10px;
+    background-color: #eae2e24a;
   }
+}
 
-  button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
+/* Định dạng cho bộ lọc */
+.filter-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+
+  .ant-select {
+    width: 200px;
+  }
+}
+
+/* Định dạng ảnh cho cột hình ảnh trong tour */
+.tour-image-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+
+  img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+}
+
+/* Định dạng bảng và nút */
+.ant-table {
+  border-radius: 8px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ant-table-thead > tr > th {
+  background-color: #6d4c41;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 16px;
+  text-align: center;
+}
+
+.ant-table-tbody > tr > td {
+  background-color: #f7f7f7;
+  color: #333;
+  text-align: center;
+  padding: 10px;
+}
+
+/* Định dạng tiêu đề và phân trang */
+.ant-table-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #6d4c41;
+  margin: 16px 0;
+}
+
+.ant-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+
+  .ant-pagination-item-active {
+    background-color: #6d4c41;
+    border-color: #6d4c41;
+    a {
+      color: #ffffff;
+    }
   }
 }
 </style>
