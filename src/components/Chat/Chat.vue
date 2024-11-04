@@ -122,6 +122,32 @@ export default {
         console.error("Lỗi khi lấy danh sách người dùng:", error);
       }
     },
+    // async fetchMessages() {
+    //   if (!this.userId || !this.receiverId) {
+    //     return;
+    //   }
+    //   try {
+    //     const response = await axiosClient.get(
+    //       `/messages/${this.userId}/${this.receiverId}`,
+    //       {
+    //         headers: {
+    //           Authorization: `Bearer ${localStorage.getItem("Token")}`,
+    //         },
+    //       }
+    //     );
+    //     if (response.data && Array.isArray(response.data)) {
+    //       this.messages = response.data.map((message) => ({
+    //         sender: message.senderName,
+    //         content: message.content,
+    //         createdAt: message.createdAt,
+    //       }));
+    //     } else {
+    //       console.error("Dữ liệu trả về không phải là mảng tin nhắn.");
+    //     }
+    //   } catch (error) {
+    //     console.error("Lỗi khi lấy tin nhắn:", error);
+    //   }
+    // },
     async fetchMessages() {
       if (!this.userId || !this.receiverId) {
         return;
@@ -135,8 +161,14 @@ export default {
             },
           }
         );
-        if (response.data && Array.isArray(response.data)) {
-          this.messages = response.data.map((message) => ({
+
+        // Access the 'data' array inside 'response.data'
+        if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data)
+        ) {
+          this.messages = response.data.data.map((message) => ({
             sender: message.senderName,
             content: message.content,
             createdAt: message.createdAt,
@@ -196,29 +228,23 @@ export default {
 </script>
 
 <style scoped>
-.notification-dot {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background-color: red;
-  border-radius: 50%;
-}
 .chat-container {
   display: flex;
-  flex-direction: row;
-  height: 500px;
+  height: 450px;
   border: 1px solid #ccc;
   padding: 10px;
   overflow: hidden;
 }
+
 .users-list {
-  margin-bottom: 10px;
-  border-bottom: 1px solid #ccc;
+  width: 200px;
+  overflow-y: auto; /* Cho phép cuộn */
+  margin-right: 10px;
   padding: 10px;
+  border-right: 1px solid #ccc;
   background-color: #f9f9f9;
 }
+
 .user-item {
   position: relative;
   cursor: pointer;
@@ -228,44 +254,69 @@ export default {
   border-radius: 4px;
   background-color: #e3f2fd;
 }
+
+.notification-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: 50%;
+}
+
 .chat-messages {
   flex-grow: 1;
-  overflow-y: auto;
-  margin-bottom: 10px;
-  margin-left: 10px;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto; /* Cho phép cuộn cho khung tin nhắn */
+  border-left: 1px solid #ccc;
+  padding: 10px;
 }
+
 .select-user-prompt {
   font-size: 1.2em;
   color: #555;
   text-align: center;
   margin-top: 20px;
 }
+
 .message {
   margin-bottom: 5px;
 }
+
 .sender {
   font-weight: bold;
   margin-right: 5px;
 }
+
 .timestamp {
   font-size: 0.8em;
   color: gray;
   margin-left: 10px;
 }
+
 .chat-input {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
-  position: absolute;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  background-color: #f1f1f1;
+  position: sticky;
   bottom: 0;
   width: 100%;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
 }
+
 .chat-input input {
   flex-grow: 1;
   padding: 5px;
   margin-right: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
+
 .chat-input button {
   padding: 5px 10px;
   background-color: #7274ff;
@@ -274,6 +325,7 @@ export default {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .chat-input button:hover {
   background-color: #5a5fc4;
 }
